@@ -74,6 +74,7 @@ class Customer(Thread):
     duration = 0
     duration_cond_complete = 0
     count = 0
+    finished = False
 
     def __init__(self, einkaufsliste, name):
         Thread.__init__(self)
@@ -84,7 +85,8 @@ class Customer(Thread):
         Customer.count += 1
 
     def run(self):
-        pass
+        while not Customer.finished:
+            time.sleep(self.einkaufsliste[self.current][0])
 
 
 # please implement here
