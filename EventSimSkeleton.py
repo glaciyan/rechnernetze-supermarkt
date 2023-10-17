@@ -123,12 +123,15 @@ class Customer():
         self.startTime = startTime
         self.stepTime = self.startTime
         self.current = 0
+        self.dropped = False
         Customer.count += 1
 
     def run(self):
         if self.current >= len(self.einkaufsliste):
-            Customer.duration += self.stepTime
-            Customer.complete += 1
+            Customer.duration += self.stepTime - self.startTime
+            if self.dropped:
+                Customer.duration_cond_complete += self.stepTime - self.startTime
+                Customer.complete += 1
             print(self.stepTime, self.name, "done")
             return  # wir können nichts mehr machen
 
@@ -154,6 +157,7 @@ class Customer():
             Customer.dropped[station.name] += 1
             self.current += 1
             self.run()
+            self.dropped = True
             return
 
         self.stepTime += station.delay_per_item * timeMultiplier
@@ -212,6 +216,7 @@ my_print('Anzahl Kunden: %i' % (Customer.count
                                 ))
 my_print('Anzahl vollständige Einkäufe %i' % Customer.complete)
 x = Customer.duration / Customer.count
+my_print('Duration: %.2fs' % Customer.duration)
 my_print(str('Mittlere Einkaufsdauer %.2fs' % x))
 x = Customer.duration_cond_complete / Customer.complete
 my_print('Mittlere Einkaufsdauer (vollständig): %.2fs' % x)
