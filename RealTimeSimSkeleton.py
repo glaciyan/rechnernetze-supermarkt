@@ -75,8 +75,10 @@ class Customer(Thread):
     duration_cond_complete = 0
     count = 0
 
-    def __init__(self):
+    def __init__(self, einkaufsliste, name):
         Thread.__init__(self)
+        self.einkaufsliste = einkaufsliste
+        self.name = name
         self.servEv = threading.Event()
 
     def run(self):
