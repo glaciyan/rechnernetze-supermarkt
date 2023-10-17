@@ -80,6 +80,8 @@ class Customer(Thread):
         self.einkaufsliste = einkaufsliste
         self.name = name
         self.servEv = threading.Event()
+        self.current = 0
+        Customer.count += 1
 
     def run(self):
         pass
