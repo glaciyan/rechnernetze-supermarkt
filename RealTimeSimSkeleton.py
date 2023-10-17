@@ -52,7 +52,7 @@ class Station(Thread):
             self.CustomerWaitEv.wait()
             while len(self.buffer) > 0:
                 self.serve()
-
+            self.CustomerWaitEv.clear()
 
     def serve(self):
         self.buffer_lock.acquire()
