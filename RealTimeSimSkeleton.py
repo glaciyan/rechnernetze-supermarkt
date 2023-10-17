@@ -6,6 +6,7 @@ import time
 f = open("supermarkt.txt", "w")
 fc = open("supermarkt_customer.txt", "w")
 fs = open("supermarkt_station.txt", "w")
+timeFactor = 1
 
 
 # print on console and into supermarket log
@@ -60,7 +61,7 @@ class Station(Thread):
         self.buffer_lock.release()
 
         waitTime = self.delay_per_item * customer.einkaufsliste[customer.current][2]
-        time.sleep(waitTime)
+        time.sleep(waitTime * timeFactor)
         customer.servEv.set()
 
 
