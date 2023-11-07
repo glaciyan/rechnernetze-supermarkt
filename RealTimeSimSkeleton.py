@@ -6,7 +6,9 @@ import time
 f = open("supermarkt.txt", "w")
 fc = open("supermarkt_customer.txt", "w")
 fs = open("supermarkt_station.txt", "w")
-timeFactor = 0.1
+timeFactor = 0.01
+
+temp_m = threading.Lock()
 
 
 # print on console and into supermarket log
@@ -62,7 +64,8 @@ class Station(Thread):
 
         waitTime = self.delay_per_item * customer.einkaufsliste[customer.current][2]
         time.sleep(waitTime * timeFactor)
-        print(customer.name, "served", self.name)
+        print(customer.current_time_step(), customer.name, "served", self.name)
+        Customer.served[self.name] += 1
         customer.servEv.set()
 
 
@@ -77,6 +80,9 @@ class Customer(Thread):
     duration_cond_complete = 0
     count = 0
 
+    def current_time_step(self):
+        return (time.time_ns() - start_time_ns) / timeFactor * 1e-9
+
     def __init__(self, einkaufsliste, name, startTime):
         Thread.__init__(self)
         self.einkaufsliste = einkaufsliste
@@ -85,16 +91,31 @@ class Customer(Thread):
         self.servEv = threading.Event()
         self.current = 0
         self.finished = False
+        self.has_skipped = False
         self.timeStep = self.startTime
         Customer.count += 1
 
     def run(self):
+        # temp_m.acquire()
+        # print("TEST", self.name, self.startTime)
+        # temp_m.release()
+
         time.sleep(self.startTime * timeFactor)
+        # print(self.startTime * timeFactor)
+
+        self.start_time_ns = time.time_ns()
+        print((self.start_time_ns - start_time_ns) / timeFactor * 1e-9, self.name, "beginn")
 
         while not self.finished:
             if self.current >= len(self.einkaufsliste):
                 self.finished = True
-                print(self.name, "done")
+                print(self.current_time_step(), self.name, "done")
+                Customer.complete += not self.has_skipped
+                time_taken = time.time_ns() - self.start_time_ns
+                Customer.duration += time_taken
+                if not self.has_skipped:
+                    Customer.duration_cond_complete += time_taken
+
                 break
 
             time.sleep(self.einkaufsliste[self.current][0] * timeFactor)
@@ -102,8 +123,10 @@ class Customer(Thread):
             station: Station = self.einkaufsliste[self.current][1]
 
             capacity = self.einkaufsliste[self.current][3]
-            if len(station.buffer) > capacity:
+            if len(station.buffer) >= capacity:
                 self.current += 1
+                self.has_skipped = True
+                Customer.dropped[station.name] += 1
                 continue
 
             station.buffer_lock.acquire()
@@ -111,7 +134,7 @@ class Customer(Thread):
             station.buffer_lock.release()
 
             station.CustomerWaitEv.set()
-            print(self.name, "ankuft", station.name)
+            print(self.current_time_step(), self.name, "ankuft", station.name)
 
             self.servEv.wait()
             self.servEv.clear()
@@ -121,13 +144,14 @@ class Customer(Thread):
 
 # please implement here
 
-
+customer_threads = []
 
 def startCustomers(einkaufsliste, name, startTime, newCustomerTime, mT):
     i = 1
     t = startTime
     while t < mT:
         kunde = Customer(list(einkaufsliste), name + str(i), t)
+        customer_threads.append(kunde)
         kunde.start()
         # ev = Ev(t, kunde.run, prio=1)
         # evQ.push(ev)
@@ -153,16 +177,24 @@ Customer.dropped['Käse'] = 0
 Customer.dropped['Kasse'] = 0
 einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)]
 einkaufsliste2 = [(30, metzger, 2, 5), (30, kasse, 3, 20), (20, baecker, 3, 20)]
+
+start_time_ns = time.time_ns()
+
 startCustomers(einkaufsliste1, 'A', 0, 200, 30 * 60 + 1)
 startCustomers(einkaufsliste2, 'B', 1, 60, 30 * 60 + 1)
-time.sleep(1000)
-# my_print('Simulationsende: %is' % EvQueue.time)
+
+for k in customer_threads:
+    k.join()
+
+
+
+my_print('Simulationsende: %is' % ((time.time_ns() - start_time_ns) / timeFactor * 1e-9))
 my_print('Anzahl Kunden: %i' % (Customer.count
                                 ))
 my_print('Anzahl vollständige Einkäufe %i' % Customer.complete)
-x = Customer.duration / Customer.count
+x = (Customer.duration / timeFactor * 1e-9) / Customer.count
 my_print(str('Mittlere Einkaufsdauer %.2fs' % x))
-x = Customer.duration_cond_complete / Customer.complete
+x = (Customer.duration_cond_complete / timeFactor * 1e-9) / Customer.complete
 my_print('Mittlere Einkaufsdauer (vollständig): %.2fs' % x)
 S = ('Bäcker', 'Metzger', 'Käse', 'Kasse')
 for s in S:

@@ -108,7 +108,6 @@ class Station():
         customer.finanlize_station()
         return
 
-
 class Customer():
     served = dict()
     dropped = dict()
@@ -129,10 +128,12 @@ class Customer():
     def run(self):
         if self.current >= len(self.einkaufsliste):
             Customer.duration += self.stepTime - self.startTime
-            if self.dropped:
+            if not self.dropped:
                 Customer.duration_cond_complete += self.stepTime - self.startTime
                 Customer.complete += 1
             print(self.stepTime, self.name, "done")
+            print(self.name, self.stepTime - self.startTime, " start time ", self.startTime)
+            EvQueue.time = self.stepTime
             return  # wir können nichts mehr machen
 
         evQ.push(Ev(self.stepTime, self.beginn_einkauf, prio=3))
@@ -216,7 +217,6 @@ my_print('Anzahl Kunden: %i' % (Customer.count
                                 ))
 my_print('Anzahl vollständige Einkäufe %i' % Customer.complete)
 x = Customer.duration / Customer.count
-my_print('Duration: %.2fs' % Customer.duration)
 my_print(str('Mittlere Einkaufsdauer %.2fs' % x))
 x = Customer.duration_cond_complete / Customer.complete
 my_print('Mittlere Einkaufsdauer (vollständig): %.2fs' % x)
